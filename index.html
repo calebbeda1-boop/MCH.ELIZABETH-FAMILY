@@ -780,40 +780,13 @@ const seed = {
   {id:'m3', name:'KAKA BEDA', role:'Member', phone:'+255 6XX 000 003', target:100000, responsibility:'Ununuzi wa Vifaa'},
   {id:'m4', name:'KAKA SAMWELI', role:'Member', phone:'+255 6XX 000 004', target:100000, responsibility:'Usimamizi wa Ujenzi'},
  ],
- contributions:[
-  {id:'c1', member:'KAKA CHALE', amount:100000, date:'2026-08-03', project:'House Renovation', method:'M-Pesa', ref:'MP240803', status:'Paid', notes:''},
-  {id:'c2', member:'DADA MANKA', amount:150000, date:'2026-08-04', project:'House Renovation', method:'Bank', ref:'BK240804', status:'Paid', notes:''},
-  {id:'c3', member:'KAKA BEDA', amount:120000, date:'2026-08-05', project:'Mother Support', method:'M-Pesa', ref:'MP240805', status:'Paid', notes:''},
-  {id:'c4', member:'KAKA SAMWELI', amount:130000, date:'2026-08-10', project:'House Renovation', method:'M-Pesa', ref:'MP240810', status:'Paid', notes:''},
-  {id:'c6', member:'KAKA CHALE', amount:250000, date:'2026-07-02', project:'House Renovation', method:'Bank', ref:'BK240702', status:'Paid', notes:''},
-  {id:'c7', member:'DADA MANKA', amount:200000, date:'2026-07-08', project:'Mother Support', method:'M-Pesa', ref:'MP240708', status:'Paid', notes:''},
-  {id:'c8', member:'KAKA BEDA', amount:180000, date:'2026-06-05', project:'House Renovation', method:'M-Pesa', ref:'MP240605', status:'Paid', notes:''},
-  {id:'c9', member:'KAKA SAMWELI', amount:160000, date:'2026-08-20', project:'House Renovation', method:'M-Pesa', ref:'MP240820', status:'Pending', notes:''},
- ],
- expenses:[
-  {id:'e1', amount:250000, date:'2026-08-06', category:'House Renovation', person:'KAKA BEDA', desc:'Ununuzi wa Mabati (sehemu)'},
-  {id:'e2', amount:100000, date:'2026-08-08', category:'Caregiver', person:'DADA MANKA', desc:'Malipo ya mwezi Dada Dora'},
-  {id:'e3', amount:60000, date:'2026-08-09', category:'Food', person:'DADA DORA', desc:'Mahitaji ya wiki'},
-  {id:'e4', amount:45000, date:'2026-08-11', category:'Electricity', person:'KAKA CHALE', desc:'LUKU ya mwezi'},
-  {id:'e5', amount:38000, date:'2026-08-12', category:'Water', person:'KAKA SAMWELI', desc:'Bili ya maji'},
-  {id:'e6', amount:377000, date:'2026-07-25', category:'Loan', person:'KAKA CHALE', desc:'Malipo ya mkopo mwezi 1'},
-  {id:'e7', amount:377000, date:'2026-08-25', category:'Loan', person:'KAKA CHALE', desc:'Malipo ya mkopo mwezi 2'},
-  {id:'e8', amount:410000, date:'2026-07-14', category:'House Renovation', person:'KAKA BEDA', desc:'Ununuzi wa Mbao (sehemu)'},
-  {id:'e9', amount:30000, date:'2026-07-20', category:'Transport', person:'KAKA SAMWELI', desc:'Usafiri wa vifaa'},
- ],
- materials:[
-  {id:'mt1', name:'Mabati', qty:'60', budget:1290000, purchased:'Yes'},
-  {id:'mt2', name:'Mbao', qty:'-', budget:1200000, purchased:'Partial'},
-  {id:'mt3', name:'Tofali', qty:'1,000 pcs', budget:1000000, purchased:'No'},
-  {id:'mt4', name:'Cement', qty:'20 pcs', budget:340000, purchased:'No'},
- ],
- loanPayments: [true,true,false,false,false,false,false,false,false,false,false,false],
- announcements:[
-  {id:'a1', author:'DADA MANKA', title:'KIKAO CHA FAMILIA', msg:'Familia, tunakumbushana kuhusu kikao cha Jumapili saa tisa mchana.', date:'2026-08-28', reacts:{heart:3,pray:1,thumb:2}},
-  {id:'a2', author:'KAKA CHALE', title:'TAARIFA YA UKARABATI', msg:'Mabati yamenunuliwa. Kazi ya paa itaanza wiki ijayo.', date:'2026-08-25', reacts:{heart:5,pray:0,thumb:1}},
- ]
+ contributions:[],
+ expenses:[],
+ materials:[],
+ loanPayments: [false,false,false,false,false,false,false,false,false,false,false,false],
+ announcements:[]
 };
-const DATA_VERSION = 'v2-wanachama4';
+const DATA_VERSION = 'v3-blank-ahadi400k';
 function loadData(){
   const storedVersion = localStorage.getItem('fam_data_version');
   if(storedVersion !== DATA_VERSION){
@@ -1007,8 +980,8 @@ function renderContributions(){
       <td>${c.project}</td>
       <td><span class="pill ${c.status.toLowerCase()}">${t(c.status==='Paid'?'paid':c.status==='Pending'?'pendingS':'partial')}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm touchable" onclick="editContribution('${c.id}')">${t('edit')}</button>
-        <button class="btn btn-danger btn-sm touchable" onclick="deleteContribution('${c.id}')">${t('delete')}</button>
+        <button class="btn btn-ghost btn-sm touchable" onclick="requireAuth(()=>editContribution('${c.id}'))">${t('edit')}</button>
+        <button class="btn btn-danger btn-sm touchable" onclick="requireAuth(()=>deleteContribution('${c.id}'))">${t('delete')}</button>
       </td>
     </tr>`).join('') + `</tbody></table>`;
 }
@@ -1029,14 +1002,14 @@ function editContribution(id){
 function deleteContribution(id){
   askConfirm(()=>{ DATA.contributions = DATA.contributions.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); });
 }
-document.getElementById('addContribBtn').onclick = ()=>{
+document.getElementById('addContribBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('contribModalTitle').textContent = t('addContribution');
   document.getElementById('contribId').value='';
   ['cAmount','cRef','cNotes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cDate').value = '2026-08-30';
   document.getElementById('cStatus').value='Paid';
   openModal('contribModal');
-};
+});
 document.getElementById('saveContribBtn').onclick = ()=>{
   const amount = document.getElementById('cAmount').value;
   const date = document.getElementById('cDate').value;
@@ -1078,8 +1051,8 @@ function renderExpenses(){
     <tr class="touchable">
       <td>${e.category}</td><td class="amount-out">${fmt(e.amount)}</td><td>${e.date}</td><td>${e.person}</td><td>${e.desc||''}</td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm touchable" onclick="editExpense('${e.id}')">${t('edit')}</button>
-        <button class="btn btn-danger btn-sm touchable" onclick="deleteExpense('${e.id}')">${t('delete')}</button>
+        <button class="btn btn-ghost btn-sm touchable" onclick="requireAuth(()=>editExpense('${e.id}'))">${t('edit')}</button>
+        <button class="btn btn-danger btn-sm touchable" onclick="requireAuth(()=>deleteExpense('${e.id}'))">${t('delete')}</button>
       </td>
     </tr>`).join('') + `</tbody></table>`;
 }
@@ -1095,13 +1068,13 @@ function editExpense(id){
   openModal('expenseModal');
 }
 function deleteExpense(id){ askConfirm(()=>{ DATA.expenses = DATA.expenses.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); }); }
-document.getElementById('addExpenseBtn').onclick = ()=>{
+document.getElementById('addExpenseBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('expenseModalTitle').textContent = t('addExpense');
   document.getElementById('eId').value='';
   ['eAmount','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eDate').value='2026-08-30';
   openModal('expenseModal');
-};
+});
 document.getElementById('saveExpenseBtn').onclick = ()=>{
   const amount = document.getElementById('eAmount').value;
   const date = document.getElementById('eDate').value;
@@ -1155,11 +1128,11 @@ function renderRenovation(){
     <tr class="touchable">
       <td>${m.name}</td><td>${m.qty}</td><td>${fmt(m.budget)}</td>
       <td><span class="pill ${m.purchased==='Yes'?'paid':m.purchased==='Partial'?'partial':'pending'}">${t(m.purchased==='Yes'?'yes':m.purchased==='Partial'?'partial':'no')}</span></td>
-      <td><button class="btn btn-danger btn-sm touchable" onclick="deleteMaterial('${m.id}')">${t('delete')}</button></td>
+      <td><button class="btn btn-danger btn-sm touchable" onclick="requireAuth(()=>deleteMaterial('${m.id}'))">${t('delete')}</button></td>
     </tr>`).join('') + `</tbody></table>`;
 }
 function deleteMaterial(id){ askConfirm(()=>{ DATA.materials = DATA.materials.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); }); }
-document.getElementById('addMaterialBtn').onclick = ()=>{ ['mName','mQty','mBudget'].forEach(id=>document.getElementById(id).value=''); openModal('materialModal'); };
+document.getElementById('addMaterialBtn').onclick = ()=>requireAuth(()=>{ ['mName','mQty','mBudget'].forEach(id=>document.getElementById(id).value=''); openModal('materialModal'); });
 document.getElementById('saveMaterialBtn').onclick = ()=>{
   const name = document.getElementById('mName').value, budget = document.getElementById('mBudget').value;
   if(!name || !budget){ toast(t('errorFields')); return; }
@@ -1169,15 +1142,15 @@ document.getElementById('saveMaterialBtn').onclick = ()=>{
 
 /* ============================= RENDER: LOAN ============================= */
 function renderLoan(){
-  document.getElementById('loanAmount').textContent = fmt(4000000);
-  document.getElementById('loanInterest').textContent = '13%';
-  document.getElementById('loanDuration').textContent = LANG==='sw'?'Miezi 12':'12 Months';
-  document.getElementById('loanMonthly').textContent = fmt(377000);
+  document.getElementById('loanAmount').textContent = fmt(0);
+  document.getElementById('loanInterest').textContent = '0%';
+  document.getElementById('loanDuration').textContent = LANG==='sw'?'Miezi 0':'0 Months';
+  document.getElementById('loanMonthly').textContent = fmt(0);
   const paid = DATA.loanPayments.filter(Boolean).length;
   document.getElementById('loanPaidCount').textContent = `${t('paid')}: ${paid} / 12`;
   document.getElementById('loanBar').style.width = Math.round(paid/12*100)+'%';
   document.getElementById('loanMonthsGrid').innerHTML = DATA.loanPayments.map((p,i)=>`
-    <div class="card touchable" style="padding:14px; text-align:center; cursor:pointer;" onclick="toggleLoanMonth(${i})">
+    <div class="card touchable" style="padding:14px; text-align:center; cursor:pointer;" onclick="requireAuth(()=>toggleLoanMonth(${i}))">
       <div style="font-size:11px;color:var(--text-dim);font-weight:700;">${LANG==='sw'?'Mwezi':'Month'} ${i+1}</div>
       <div style="margin-top:6px;"><span class="pill ${p?'paid':'pending'}">${p? t('paid') : t('pendingS')}</span></div>
     </div>`).join('');
@@ -1186,14 +1159,14 @@ function toggleLoanMonth(i){ DATA.loanPayments[i] = !DATA.loanPayments[i]; saveD
 
 /* ============================= RENDER: MOTHER SUPPORT ============================= */
 function renderMother(){
-  const budget = 300000;
+  const budget = 0;
   const collected = DATA.contributions.filter(c=>c.status==='Paid' && c.project==='Mother Support').reduce((s,c)=>s+Number(c.amount),0);
   const spent = DATA.expenses.filter(e=>['Mama Support','Food','Caregiver','Electricity','Water'].includes(e.category)).reduce((s,e)=>s+Number(e.amount),0);
   document.getElementById('momBudget').textContent = fmt(budget);
   document.getElementById('momCollected').textContent = fmt(collected);
   document.getElementById('momSpent').textContent = fmt(spent);
   document.getElementById('momRemaining').textContent = fmt(collected-spent);
-  document.getElementById('caregiverPay').textContent = fmt(100000) + ' / ' + (LANG==='sw'?'mwezi':'month');
+  document.getElementById('caregiverPay').textContent = fmt(0) + ' / ' + (LANG==='sw'?'mwezi':'month');
   const needs = ['food','other'].length; // placeholder not used
   const needKeys = [['food','🍚'],['category','🌽'],['other','🛢️'],['other','🧂'],['water','💧'],['electricity','⚡'],['caregiver','🧑‍🍳'],['transport','🚗'],['other','🧺']];
   const labels = LANG==='sw'
@@ -1275,14 +1248,14 @@ function renderAnnouncements(){
       <div style="font-weight:700;margin-bottom:5px;">${a.title}</div>
       <div style="color:var(--text-dim);font-size:13.5px;line-height:1.5;">${a.msg}</div>
       <div class="reacts">
-        <button class="react-btn touchable" onclick="react('${a.id}','heart')">❤️ ${a.reacts.heart}</button>
-        <button class="react-btn touchable" onclick="react('${a.id}','pray')">🙏 ${a.reacts.pray}</button>
-        <button class="react-btn touchable" onclick="react('${a.id}','thumb')">👍 ${a.reacts.thumb}</button>
+        <button class="react-btn touchable" onclick="requireAuth(()=>react('${a.id}','heart'))">❤️ ${a.reacts.heart}</button>
+        <button class="react-btn touchable" onclick="requireAuth(()=>react('${a.id}','pray'))">🙏 ${a.reacts.pray}</button>
+        <button class="react-btn touchable" onclick="requireAuth(()=>react('${a.id}','thumb'))">👍 ${a.reacts.thumb}</button>
       </div>
     </div>`).join('');
 }
 function react(id, type){ const a = DATA.announcements.find(x=>x.id===id); a.reacts[type]++; saveData(); renderAnnouncements(); }
-document.getElementById('addAnnBtn').onclick = ()=>{ document.getElementById('aTitle').value=''; document.getElementById('aMsg').value=''; openModal('annModal'); };
+document.getElementById('addAnnBtn').onclick = ()=>requireAuth(()=>{ document.getElementById('aTitle').value=''; document.getElementById('aMsg').value=''; openModal('annModal'); });
 document.getElementById('saveAnnBtn').onclick = ()=>{
   const title = document.getElementById('aTitle').value, msg = document.getElementById('aMsg').value;
   if(!title || !msg){ toast(t('errorFields')); return; }
@@ -1290,10 +1263,21 @@ document.getElementById('saveAnnBtn').onclick = ()=>{
   saveData(); closeModal('annModal'); renderAnnouncements(); toast(t('savedContrib'));
 };
 
-/* ============================= EDIT TAB (password protected) ============================= */
+/* ============================= GLOBAL AUTH GATE (password required for ANY data change) ============================= */
 const EDIT_PASSWORD = 'ELIZABETH2026';
 let editUnlocked = sessionStorage.getItem('fam_edit_unlocked') === '1';
-
+function requireAuth(action){
+  if(editUnlocked){ action(); return; }
+  const val = window.prompt(LANG==='sw' ? 'Weka Password ya Kuhariri:' : 'Enter Edit Password:');
+  if(val === null) return;
+  if(val === EDIT_PASSWORD){
+    editUnlocked = true;
+    sessionStorage.setItem('fam_edit_unlocked','1');
+    action();
+  } else {
+    toast(t('wrongPassword'));
+  }
+}
 function renderEditTab(){
   const lockedPanel = document.getElementById('editLockedPanel');
   const unlockedPanel = document.getElementById('editUnlockedPanel');
