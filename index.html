@@ -74,6 +74,15 @@ label{ font-size:12.5px; color:var(--text-dim); display:block; margin-bottom:6px
 ::-webkit-scrollbar{ width:8px; height:8px; }
 ::-webkit-scrollbar-thumb{ background:var(--gold-dim); border-radius:8px; }
 
+/* ---------- loading ---------- */
+.loading-overlay{ position:fixed; inset:0; background:var(--bg); z-index:600; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+.loading-spinner{ width:42px; height:42px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--gold); animation:spin .9s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.loading-overlay p{ color:var(--text-dim); font-size:13.5px; font-weight:600; }
+.sync-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:6px; box-shadow:0 0 8px var(--green); animation:pulse 1.6s ease-in-out infinite; }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+.sync-note{ display:flex; align-items:center; font-size:11.5px; color:var(--text-faint); font-weight:600; margin-top:4px; }
+
 /* ---------- touch glow ---------- */
 .touchable{ position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease; }
 .touchable:active{ transform:scale(.97); }
@@ -245,6 +254,12 @@ tr.touchable:hover{ background:var(--panel-2); }
 </head>
 <body data-theme="dark">
 
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <p id="loadingText">Inapakia taarifa za familia...</p>
+</div>
+
 <div class="app">
   <!-- SIDEBAR (desktop) -->
   <aside class="sidebar">
@@ -259,6 +274,7 @@ tr.touchable:hover{ background:var(--panel-2); }
     </div>
     <nav class="nav" id="sideNav"></nav>
     <div class="sidebar-foot">
+      <div class="sync-note"><span class="sync-dot"></span><span id="syncNoteSide">Data ya pamoja &middot; inaonekana kwa wote</span></div>
       <div class="langsw" id="langswSide">
         <button data-lang="sw">SW</button>
         <button data-lang="en">EN</button>
@@ -691,7 +707,9 @@ sw:{
   totalOverrideHint:"Acha wazi kutumia jumla halisi ya michango.", lockAgain:"Funga Tena", unlocked:"Imefunguliwa ✓",
   role:"Wadhifa", phone:"Namba ya Simu", monthlyTargetField:"Lengo la Mwezi (TSh)", responsibility:"Jukumu",
   fullName:"Jina Kamili", confirmRemoveMember:"Una uhakika unataka kumwondoa huyu mwanafamilia? Historia ya michango yake itabaki.",
-  savedMember:"✅ Taarifa za mwanafamilia zimehifadhiwa", editHint:"Sehemu hii inaonekana kwa wote lakini kuhariri kunahitaji nenosiri."
+  savedMember:"✅ Taarifa za mwanafamilia zimehifadhiwa", editHint:"Sehemu hii inaonekana kwa wote lakini kuhariri kunahitaji nenosiri.",
+  loadingText:"Inapakia taarifa za familia...", syncNote:"Data ya pamoja &middot; inaonekana kwa wote",
+  saveFailed:"⚠️ Hifadhi imeshindikana, jaribu tena", loadFailed:"⚠️ Imeshindwa kupakia taarifa, jaribu kufresh ukurasa"
 },
 en:{
   dashboard:"Dashboard", contributions:"Contributions", expenses:"Expenses", renovation:"House Renovation",
@@ -729,10 +747,13 @@ en:{
   totalOverrideHint:"Leave blank to use the actual contribution total.", lockAgain:"Lock Again", unlocked:"Unlocked ✓",
   role:"Role", phone:"Phone Number", monthlyTargetField:"Monthly Target (TSh)", responsibility:"Responsibility",
   fullName:"Full Name", confirmRemoveMember:"Are you sure you want to remove this family member? Their contribution history will remain.",
-  savedMember:"✅ Member details saved", editHint:"This section is visible to everyone, but editing requires a password."
+  savedMember:"✅ Member details saved", editHint:"This section is visible to everyone, but editing requires a password.",
+  loadingText:"Loading family data...", syncNote:"Shared data &middot; visible to everyone",
+  saveFailed:"⚠️ Save failed, please try again", loadFailed:"⚠️ Failed to load data, please refresh the page"
 }
 };
-let LANG = localStorage.getItem('fam_lang') || 'sw';
+let LANG = 'sw';
+let THEME = 'dark';
 function t(k){ return (I18N[LANG] && I18N[LANG][k]) || k; }
 
 /* ============================= ICONS ============================= */
@@ -772,7 +793,7 @@ const NAV_ITEMS = [
 ];
 const BOTTOM_MAIN = ['dashboard','contributions','expenses','renovation','mother'];
 
-/* ============================= DATA ============================= */
+/* ============================= DATA (SHARED, PERSISTENT) ============================= */
 const seed = {
  members:[
   {id:'m1', name:'DADA MANKA', role:'Coordinator', phone:'+255 6XX 000 001', target:100000, responsibility:'Uratibu wa Familia'},
@@ -786,20 +807,53 @@ const seed = {
  loanPayments: [false,false,false,false,false,false,false,false,false,false,false,false],
  announcements:[]
 };
-const DATA_VERSION = 'v3-blank-ahadi400k';
-function loadData(){
-  const storedVersion = localStorage.getItem('fam_data_version');
-  if(storedVersion !== DATA_VERSION){
-    localStorage.setItem('fam_data_version', DATA_VERSION);
-    localStorage.setItem('fam_data', JSON.stringify(seed));
-    return JSON.parse(JSON.stringify(seed));
+/* Shared key: every family member who opens this dashboard reads/writes the SAME record.
+   Bump this key only if you intentionally want to reset everyone's data. */
+const DATA_KEY = 'family-elizabeth-data-v1';
+const PREFS_KEY = 'family-elizabeth-prefs-v1';
+
+let DATA = JSON.parse(JSON.stringify(seed));
+
+async function loadData(){
+  try{
+    const result = await window.storage.get(DATA_KEY, true);
+    if(result && result.value){
+      DATA = JSON.parse(result.value);
+    } else {
+      DATA = JSON.parse(JSON.stringify(seed));
+      await saveData();
+    }
+  } catch(e){
+    // Key not found yet (first ever load) -> seed it
+    DATA = JSON.parse(JSON.stringify(seed));
+    try{ await saveData(); }catch(e2){ console.error('Seed save failed', e2); }
   }
-  const stored = localStorage.getItem('fam_data');
-  if(stored){ try{ return JSON.parse(stored); }catch(e){} }
-  return JSON.parse(JSON.stringify(seed));
 }
-let DATA = loadData();
-function saveData(){ localStorage.setItem('fam_data', JSON.stringify(DATA)); }
+async function saveData(){
+  try{
+    const result = await window.storage.set(DATA_KEY, JSON.stringify(DATA), true);
+    if(!result){ toast(t('saveFailed')); }
+    return result;
+  } catch(e){
+    console.error('Save error', e);
+    toast(t('saveFailed'));
+    return null;
+  }
+}
+async function loadPrefs(){
+  try{
+    const result = await window.storage.get(PREFS_KEY, false);
+    if(result && result.value){
+      const p = JSON.parse(result.value);
+      if(p.lang) LANG = p.lang;
+      if(p.theme) THEME = p.theme;
+    }
+  } catch(e){ /* no saved prefs yet, defaults stand */ }
+}
+async function savePrefs(){
+  try{ await window.storage.set(PREFS_KEY, JSON.stringify({lang:LANG, theme:THEME}), false); }
+  catch(e){ console.error('Pref save failed', e); }
+}
 
 /* ============================= HELPERS ============================= */
 function fmt(n){ return 'TSh ' + Math.round(n).toLocaleString('en-US'); }
@@ -821,6 +875,9 @@ function toast(msg){
 }
 function openModal(id){ document.getElementById(id).classList.add('show'); }
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function anyModalOpen(){ return !!document.querySelector('.overlay.show'); }
+function showLoadingOverlay(){ const el = document.getElementById('loadingOverlay'); if(el) el.style.display='flex'; }
+function hideLoadingOverlay(){ const el = document.getElementById('loadingOverlay'); if(el) el.style.display='none'; }
 
 /* touch ripple */
 document.addEventListener('pointerdown', e=>{
@@ -1000,7 +1057,7 @@ function editContribution(id){
   openModal('contribModal');
 }
 function deleteContribution(id){
-  askConfirm(()=>{ DATA.contributions = DATA.contributions.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); });
+  askConfirm(async ()=>{ DATA.contributions = DATA.contributions.filter(x=>x.id!==id); await saveData(); renderAll(); toast(t('deletedMsg')); });
 }
 document.getElementById('addContribBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('contribModalTitle').textContent = t('addContribution');
@@ -1010,7 +1067,7 @@ document.getElementById('addContribBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('cStatus').value='Paid';
   openModal('contribModal');
 });
-document.getElementById('saveContribBtn').onclick = ()=>{
+document.getElementById('saveContribBtn').onclick = async ()=>{
   const amount = document.getElementById('cAmount').value;
   const date = document.getElementById('cDate').value;
   if(!amount || !date){ toast(t('errorFields')); return; }
@@ -1022,7 +1079,7 @@ document.getElementById('saveContribBtn').onclick = ()=>{
   };
   if(id){ const idx = DATA.contributions.findIndex(x=>x.id===id); DATA.contributions[idx]=obj; }
   else{ DATA.contributions.push(obj); }
-  saveData(); closeModal('contribModal'); renderAll(); toast(t('savedContrib'));
+  await saveData(); closeModal('contribModal'); renderAll(); toast(t('savedContrib'));
 };
 
 /* ============================= RENDER: EXPENSES ============================= */
@@ -1067,7 +1124,7 @@ function editExpense(id){
   document.getElementById('eDesc').value = e.desc;
   openModal('expenseModal');
 }
-function deleteExpense(id){ askConfirm(()=>{ DATA.expenses = DATA.expenses.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); }); }
+function deleteExpense(id){ askConfirm(async ()=>{ DATA.expenses = DATA.expenses.filter(x=>x.id!==id); await saveData(); renderAll(); toast(t('deletedMsg')); }); }
 document.getElementById('addExpenseBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('expenseModalTitle').textContent = t('addExpense');
   document.getElementById('eId').value='';
@@ -1075,7 +1132,7 @@ document.getElementById('addExpenseBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('eDate').value='2026-08-30';
   openModal('expenseModal');
 });
-document.getElementById('saveExpenseBtn').onclick = ()=>{
+document.getElementById('saveExpenseBtn').onclick = async ()=>{
   const amount = document.getElementById('eAmount').value;
   const date = document.getElementById('eDate').value;
   if(!amount || !date){ toast(t('errorFields')); return; }
@@ -1084,7 +1141,7 @@ document.getElementById('saveExpenseBtn').onclick = ()=>{
     person: document.getElementById('ePerson').value, desc: document.getElementById('eDesc').value };
   if(id){ const idx = DATA.expenses.findIndex(x=>x.id===id); DATA.expenses[idx]=obj; }
   else{ DATA.expenses.push(obj); }
-  saveData(); closeModal('expenseModal'); renderAll(); toast(t('savedExpense'));
+  await saveData(); closeModal('expenseModal'); renderAll(); toast(t('savedExpense'));
 };
 
 /* ============================= RENDER: MEMBERS ============================= */
@@ -1131,13 +1188,13 @@ function renderRenovation(){
       <td><button class="btn btn-danger btn-sm touchable" onclick="requireAuth(()=>deleteMaterial('${m.id}'))">${t('delete')}</button></td>
     </tr>`).join('') + `</tbody></table>`;
 }
-function deleteMaterial(id){ askConfirm(()=>{ DATA.materials = DATA.materials.filter(x=>x.id!==id); saveData(); renderAll(); toast(t('deletedMsg')); }); }
+function deleteMaterial(id){ askConfirm(async ()=>{ DATA.materials = DATA.materials.filter(x=>x.id!==id); await saveData(); renderAll(); toast(t('deletedMsg')); }); }
 document.getElementById('addMaterialBtn').onclick = ()=>requireAuth(()=>{ ['mName','mQty','mBudget'].forEach(id=>document.getElementById(id).value=''); openModal('materialModal'); });
-document.getElementById('saveMaterialBtn').onclick = ()=>{
+document.getElementById('saveMaterialBtn').onclick = async ()=>{
   const name = document.getElementById('mName').value, budget = document.getElementById('mBudget').value;
   if(!name || !budget){ toast(t('errorFields')); return; }
   DATA.materials.push({ id:uid('mt'), name, qty:document.getElementById('mQty').value||'-', budget:Number(budget), purchased:document.getElementById('mPurchased').value });
-  saveData(); closeModal('materialModal'); renderAll(); toast(t('savedExpense'));
+  await saveData(); closeModal('materialModal'); renderAll(); toast(t('savedExpense'));
 };
 
 /* ============================= RENDER: LOAN ============================= */
@@ -1155,7 +1212,7 @@ function renderLoan(){
       <div style="margin-top:6px;"><span class="pill ${p?'paid':'pending'}">${p? t('paid') : t('pendingS')}</span></div>
     </div>`).join('');
 }
-function toggleLoanMonth(i){ DATA.loanPayments[i] = !DATA.loanPayments[i]; saveData(); renderLoan(); }
+async function toggleLoanMonth(i){ DATA.loanPayments[i] = !DATA.loanPayments[i]; await saveData(); renderLoan(); }
 
 /* ============================= RENDER: MOTHER SUPPORT ============================= */
 function renderMother(){
@@ -1167,8 +1224,6 @@ function renderMother(){
   document.getElementById('momSpent').textContent = fmt(spent);
   document.getElementById('momRemaining').textContent = fmt(collected-spent);
   document.getElementById('caregiverPay').textContent = fmt(0) + ' / ' + (LANG==='sw'?'mwezi':'month');
-  const needs = ['food','other'].length; // placeholder not used
-  const needKeys = [['food','🍚'],['category','🌽'],['other','🛢️'],['other','🧂'],['water','💧'],['electricity','⚡'],['caregiver','🧑‍🍳'],['transport','🚗'],['other','🧺']];
   const labels = LANG==='sw'
     ? ['Chakula','Mchele','Mahindi','Mafuta','Sukari','Maji','Umeme','Msaidizi','Usafiri','Nyingine']
     : ['Food','Rice','Maize','Cooking Oil','Sugar','Water','Electricity','Caregiver','Transport','Other'];
@@ -1254,25 +1309,24 @@ function renderAnnouncements(){
       </div>
     </div>`).join('');
 }
-function react(id, type){ const a = DATA.announcements.find(x=>x.id===id); a.reacts[type]++; saveData(); renderAnnouncements(); }
+async function react(id, type){ const a = DATA.announcements.find(x=>x.id===id); a.reacts[type]++; await saveData(); renderAnnouncements(); }
 document.getElementById('addAnnBtn').onclick = ()=>requireAuth(()=>{ document.getElementById('aTitle').value=''; document.getElementById('aMsg').value=''; openModal('annModal'); });
-document.getElementById('saveAnnBtn').onclick = ()=>{
+document.getElementById('saveAnnBtn').onclick = async ()=>{
   const title = document.getElementById('aTitle').value, msg = document.getElementById('aMsg').value;
   if(!title || !msg){ toast(t('errorFields')); return; }
   DATA.announcements.push({ id:uid('a'), author:'ADMIN', title, msg, date:'2026-08-30', reacts:{heart:0,pray:0,thumb:0} });
-  saveData(); closeModal('annModal'); renderAnnouncements(); toast(t('savedContrib'));
+  await saveData(); closeModal('annModal'); renderAnnouncements(); toast(t('savedContrib'));
 };
 
 /* ============================= GLOBAL AUTH GATE (password required for ANY data change) ============================= */
 const EDIT_PASSWORD = 'ELIZABETH2026';
-let editUnlocked = sessionStorage.getItem('fam_edit_unlocked') === '1';
+let editUnlocked = false; /* resets every reload for safety — not persisted anywhere */
 function requireAuth(action){
   if(editUnlocked){ action(); return; }
   const val = window.prompt(LANG==='sw' ? 'Weka Password ya Kuhariri:' : 'Enter Edit Password:');
   if(val === null) return;
   if(val === EDIT_PASSWORD){
     editUnlocked = true;
-    sessionStorage.setItem('fam_edit_unlocked','1');
     action();
   } else {
     toast(t('wrongPassword'));
@@ -1297,7 +1351,6 @@ function attemptUnlock(){
   const errEl = document.getElementById('editPasswordError');
   if(val === EDIT_PASSWORD){
     editUnlocked = true;
-    sessionStorage.setItem('fam_edit_unlocked','1');
     document.getElementById('editPasswordInput').value='';
     errEl.textContent='';
     renderEditTab();
@@ -1307,7 +1360,6 @@ function attemptUnlock(){
 }
 document.getElementById('lockAgainBtn').onclick = ()=>{
   editUnlocked = false;
-  sessionStorage.removeItem('fam_edit_unlocked');
   renderEditTab();
 };
 
@@ -1349,12 +1401,12 @@ function editMemberOpen(id){
   openModal('editMemberModal');
 }
 function removeMember(id){
-  askConfirm(()=>{
+  askConfirm(async ()=>{
     DATA.members = DATA.members.filter(x=>x.id!==id);
-    saveData(); renderEditTab(); renderAll(); toast(t('deletedMsg'));
+    await saveData(); renderEditTab(); renderAll(); toast(t('deletedMsg'));
   }, t('confirmRemoveMember'));
 }
-document.getElementById('saveEditMemberBtn').onclick = ()=>{
+document.getElementById('saveEditMemberBtn').onclick = async ()=>{
   const name = document.getElementById('emName').value.trim();
   if(!name){ toast(t('errorFields')); return; }
   const id = document.getElementById('emId').value;
@@ -1379,7 +1431,7 @@ document.getElementById('saveEditMemberBtn').onclick = ()=>{
   } else {
     DATA.members.push(obj);
   }
-  saveData(); closeModal('editMemberModal'); renderEditTab(); renderAll(); toast(t('savedMember'));
+  await saveData(); closeModal('editMemberModal'); renderEditTab(); renderAll(); toast(t('savedMember'));
 };
 
 /* ============================= FILTER LISTENERS ============================= */
@@ -1409,17 +1461,42 @@ function applyStaticI18n(){
   [document.getElementById('langswSide'), document.getElementById('langswTop')].forEach(box=>{
     box.querySelectorAll('button').forEach(b=> b.classList.toggle('active', b.dataset.lang===LANG));
   });
+  const sn = document.getElementById('syncNoteSide');
+  if(sn) sn.innerHTML = t('syncNote');
+  const lt = document.getElementById('loadingText');
+  if(lt) lt.textContent = t('loadingText');
 }
-function setLang(l){ LANG = l; localStorage.setItem('fam_lang', l); applyStaticI18n(); renderNav(); renderGreeting(); renderAll(); toast(t('langChanged')); }
+async function setLang(l){ LANG = l; applyStaticI18n(); renderNav(); renderGreeting(); renderAll(); toast(t('langChanged')); await savePrefs(); }
 document.querySelectorAll('.langsw button').forEach(b=> b.onclick = ()=> setLang(b.dataset.lang));
 
-function setTheme(th){
+async function setTheme(th){
+  THEME = th;
   document.body.setAttribute('data-theme', th);
-  localStorage.setItem('fam_theme', th);
   document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===th));
   renderAll();
+  await savePrefs();
 }
 document.querySelectorAll('.theme-toggle button').forEach(b=> b.onclick = ()=> setTheme(b.dataset.th));
+
+/* ============================= AUTO-REFRESH (pick up other members'/admin's updates) ============================= */
+let refreshTimer = null;
+function startAutoRefresh(){
+  if(refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(async ()=>{
+    if(anyModalOpen()) return; // don't yank data out from under someone mid-edit
+    try{
+      const result = await window.storage.get(DATA_KEY, true);
+      if(result && result.value){
+        const incoming = result.value;
+        const current = JSON.stringify(DATA);
+        if(incoming !== current){
+          DATA = JSON.parse(incoming);
+          renderAll();
+        }
+      }
+    } catch(e){ /* transient network hiccup, ignore and try again next tick */ }
+  }, 20000);
+}
 
 /* ============================= MASTER RENDER ============================= */
 function renderAll(){
@@ -1439,15 +1516,22 @@ function renderAll(){
 }
 
 /* ============================= INIT ============================= */
-(function init(){
-  const savedTheme = localStorage.getItem('fam_theme') || 'dark';
-  document.body.setAttribute('data-theme', savedTheme);
-  document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===savedTheme));
+async function init(){
+  showLoadingOverlay();
+  try{
+    await loadPrefs();
+  } catch(e){ /* defaults stand */ }
+  document.body.setAttribute('data-theme', THEME);
+  document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
+  await loadData();
   renderNav();
   applyStaticI18n();
   renderGreeting();
   renderDashboard();
-})();
+  hideLoadingOverlay();
+  startAutoRefresh();
+}
+init();
 </script>
 </body>
 </html>
