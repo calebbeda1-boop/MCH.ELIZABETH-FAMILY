@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#0a0907;
@@ -258,6 +260,7 @@ tr.touchable:hover{ background:var(--panel-2); }
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <p id="loadingText">Inapakia taarifa za familia...</p>
+  <p id="loadingSubtext" style="font-size:11.5px;color:var(--text-faint);max-width:280px;text-align:center;"></p>
 </div>
 
 <div class="app">
@@ -807,53 +810,71 @@ const seed = {
  loanPayments: [false,false,false,false,false,false,false,false,false,false,false,false],
  announcements:[]
 };
-/* Shared key: every family member who opens this dashboard reads/writes the SAME record.
-   Bump this key only if you intentionally want to reset everyone's data. */
-const DATA_KEY = 'family-elizabeth-data-v1';
-const PREFS_KEY = 'family-elizabeth-prefs-v1';
+/* ============================= FIREBASE (shared, cross-device, real-time) =============================
+   Fill in YOUR OWN Firebase project keys below. Steps:
+   1) Go to https://console.firebase.google.com -> Add project (any name, e.g. "familia-elizabeth")
+   2) Build -> Firestore Database -> Create database -> start in TEST MODE (you can lock it down later)
+   3) Project settings (gear icon) -> General -> "Your apps" -> Add app -> Web (</>) -> register
+   4) Copy the firebaseConfig object Firebase gives you and paste its values below
+   5) Redeploy to Vercel. Every family member who opens the link now shares the SAME live data.
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyB16SPdze1q1V2nV9_Bky55E0TXePfGlw8",
+  authDomain: "pastor-elizabeth-family-8814b.firebaseapp.com",
+  projectId: "pastor-elizabeth-family-8814b",
+  storageBucket: "pastor-elizabeth-family-8814b.firebasestorage.app",
+  messagingSenderId: "1024433281541",
+  appId: "1:1024433281541:web:8a96a228e3bc3d8c2b1a6c"
+};
+
+let db = null;
+let firebaseReady = false;
+try{
+  if(firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE_')){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseReady = true;
+  }
+}catch(e){ console.error('Firebase init failed', e); firebaseReady = false; }
+
+const FAMILY_DOC = () => db.collection('family_elizabeth').doc('data');
 
 let DATA = JSON.parse(JSON.stringify(seed));
 
 async function loadData(){
+  if(!firebaseReady){
+    // No Firebase config yet -> run on local seed data only, nothing will sync or persist.
+    DATA = JSON.parse(JSON.stringify(seed));
+    return;
+  }
   try{
-    const result = await window.storage.get(DATA_KEY, true);
-    if(result && result.value){
-      DATA = JSON.parse(result.value);
+    const snap = await FAMILY_DOC().get();
+    if(snap.exists && snap.data().payload){
+      DATA = JSON.parse(snap.data().payload);
     } else {
       DATA = JSON.parse(JSON.stringify(seed));
       await saveData();
     }
   } catch(e){
-    // Key not found yet (first ever load) -> seed it
+    console.error('Load error', e);
     DATA = JSON.parse(JSON.stringify(seed));
-    try{ await saveData(); }catch(e2){ console.error('Seed save failed', e2); }
   }
 }
 async function saveData(){
+  if(!firebaseReady){ toast(t('saveFailed')); return null; }
   try{
-    const result = await window.storage.set(DATA_KEY, JSON.stringify(DATA), true);
-    if(!result){ toast(t('saveFailed')); }
-    return result;
+    await FAMILY_DOC().set({ payload: JSON.stringify(DATA), updatedAt: Date.now() });
+    return true;
   } catch(e){
     console.error('Save error', e);
     toast(t('saveFailed'));
     return null;
   }
 }
-async function loadPrefs(){
-  try{
-    const result = await window.storage.get(PREFS_KEY, false);
-    if(result && result.value){
-      const p = JSON.parse(result.value);
-      if(p.lang) LANG = p.lang;
-      if(p.theme) THEME = p.theme;
-    }
-  } catch(e){ /* no saved prefs yet, defaults stand */ }
-}
-async function savePrefs(){
-  try{ await window.storage.set(PREFS_KEY, JSON.stringify({lang:LANG, theme:THEME}), false); }
-  catch(e){ console.error('Pref save failed', e); }
-}
+/* Language/theme are just local display preferences, kept in memory only (default sw/dark on every visit)
+   so this works identically wherever it's hosted. */
+async function loadPrefs(){ /* no-op: defaults stand */ }
+async function savePrefs(){ /* no-op: nothing to persist */ }
 
 /* ============================= HELPERS ============================= */
 function fmt(n){ return 'TSh ' + Math.round(n).toLocaleString('en-US'); }
@@ -1478,24 +1499,22 @@ async function setTheme(th){
 }
 document.querySelectorAll('.theme-toggle button').forEach(b=> b.onclick = ()=> setTheme(b.dataset.th));
 
-/* ============================= AUTO-REFRESH (pick up other members'/admin's updates) ============================= */
-let refreshTimer = null;
+/* ============================= REAL-TIME SYNC (Firestore pushes updates instantly to every open dashboard) ============================= */
 function startAutoRefresh(){
-  if(refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(async ()=>{
-    if(anyModalOpen()) return; // don't yank data out from under someone mid-edit
-    try{
-      const result = await window.storage.get(DATA_KEY, true);
-      if(result && result.value){
-        const incoming = result.value;
-        const current = JSON.stringify(DATA);
-        if(incoming !== current){
+  if(!firebaseReady) return;
+  FAMILY_DOC().onSnapshot(
+    doc=>{
+      if(anyModalOpen()) return; // don't yank data out from under someone mid-edit
+      if(doc.exists && doc.data().payload){
+        const incoming = doc.data().payload;
+        if(incoming !== JSON.stringify(DATA)){
           DATA = JSON.parse(incoming);
           renderAll();
         }
       }
-    } catch(e){ /* transient network hiccup, ignore and try again next tick */ }
-  }, 20000);
+    },
+    err=>{ console.error('Realtime sync error', err); }
+  );
 }
 
 /* ============================= MASTER RENDER ============================= */
@@ -1518,9 +1537,12 @@ function renderAll(){
 /* ============================= INIT ============================= */
 async function init(){
   showLoadingOverlay();
-  try{
-    await loadPrefs();
-  } catch(e){ /* defaults stand */ }
+  if(!firebaseReady){
+    const sub = document.getElementById('loadingSubtext');
+    if(sub) sub.textContent = LANG==='sw'
+      ? '⚠️ Firebase haijasanidiwa bado — data haitahifadhika wala kushirikiwa. Angalia maelezo ya usanidi kwenye msimbo.'
+      : '⚠️ Firebase is not configured yet — data will not persist or sync. See setup notes in the code.';
+  }
   document.body.setAttribute('data-theme', THEME);
   document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
   await loadData();
