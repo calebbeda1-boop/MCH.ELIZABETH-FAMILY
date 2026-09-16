@@ -1,0 +1,31 @@
+{
+  "name": "Account Familia MCH. Elizabeth",
+  "short_name": "Familia Elizabeth",
+  "description": "Akaunti ya fedha ya Familia MCH. Elizabeth — michango, matumizi, na uwazi wa familia.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0907",
+  "theme_color": "#0a0907",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
