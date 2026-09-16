@@ -1,43 +1,67 @@
-// Familia Elizabeth — Service Worker
-// Lengo: kuruhusu app "iwe installable" kama PWA, na kuhifadhi ganda (shell) la app
-// ili ifunguke haraka hata kama mtandao ni dhaifu. Data halisi bado inatoka Firebase moja kwa moja.
+/* ============================================================
+   Familia Elizabeth — Service Worker
+   IMPORTANT: bump CACHE_VERSION on every deploy. This is what
+   forces every phone/PC to drop the old cached app and fetch
+   the new index.html instead of silently reusing a stale copy
+   (this was the cause of "Chart is not defined" persisting
+   after the fix, and data looking out of sync on other devices).
+   ============================================================ */
+const CACHE_VERSION = 'v3';
+const CACHE_NAME = 'familia-elizabeth-' + CACHE_VERSION;
 
-const CACHE_NAME = 'familia-elizabeth-v1';
-const SHELL_FILES = [
-  '/',
-  '/index.html',
+/* Only truly static, rarely-changing files go here. The main
+   index.html is NOT pre-cached — it is always fetched fresh
+   from the network first (see fetch handler below), so a new
+   deploy is picked up immediately instead of being masked by
+   an old cached page. */
+const STATIC_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_FILES)).catch(()=>{})
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  self.skipWaiting(); // activate the new SW immediately, don't wait for old tabs to close
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME) // delete every OLD versioned cache
+          .map((key) => caches.delete(key))
+      )
     )
   );
-  self.clients.claim();
+  self.clients.claim(); // take control of any already-open tabs right away
 });
 
-// Network-first kwa kila kitu (data ya Firebase haiathiriwi na huduma hii kwa sababu
-// maombi yake huenda moja kwa moja kwa firestore.googleapis.com, si kwa faili za tovuti).
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+
+  // Navigation requests (the app page itself, index.html): network-first.
+  // This is the key fix — always try to get the latest deployed HTML/JS;
+  // only fall back to a cached copy if there is truly no network at all.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Everything else (icons, manifest): cache-first, network fallback.
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(()=>{});
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });
