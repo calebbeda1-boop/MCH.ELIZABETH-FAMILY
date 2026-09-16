@@ -257,6 +257,7 @@ tr.touchable:hover{ background:var(--panel-2); }
 <body data-theme="dark">
 
 <!-- LOADING OVERLAY -->
+<div id="connErrorBanner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:700; background:#7a2320; color:#fff; padding:10px 16px; font-size:12.5px; font-weight:600; text-align:center; line-height:1.5;"></div>
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
   <p id="loadingText">Inapakia taarifa za familia...</p>
@@ -826,16 +827,16 @@ const firebaseConfig = {
   messagingSenderId: "1024433281541",
   appId: "1:1024433281541:web:8a96a228e3bc3d8c2b1a6c"
 };
-
 let db = null;
 let firebaseReady = false;
+let firebaseInitError = null;
 try{
   if(firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE_')){
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     firebaseReady = true;
   }
-}catch(e){ console.error('Firebase init failed', e); firebaseReady = false; }
+}catch(e){ console.error('Firebase init failed', e); firebaseReady = false; firebaseInitError = e && e.message ? e.message : String(e); }
 
 const FAMILY_DOC = () => db.collection('family_elizabeth').doc('data');
 
@@ -843,7 +844,6 @@ let DATA = JSON.parse(JSON.stringify(seed));
 
 async function loadData(){
   if(!firebaseReady){
-    // No Firebase config yet -> run on local seed data only, nothing will sync or persist.
     DATA = JSON.parse(JSON.stringify(seed));
     return;
   }
@@ -857,6 +857,7 @@ async function loadData(){
     }
   } catch(e){
     console.error('Load error', e);
+    showConnError((LANG==='sw'?'Hitilafu ya kuunganisha na Firebase: ':'Firebase connection error: ') + (e && e.message ? e.message : String(e)));
     DATA = JSON.parse(JSON.stringify(seed));
   }
 }
@@ -899,6 +900,8 @@ function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 function anyModalOpen(){ return !!document.querySelector('.overlay.show'); }
 function showLoadingOverlay(){ const el = document.getElementById('loadingOverlay'); if(el) el.style.display='flex'; }
 function hideLoadingOverlay(){ const el = document.getElementById('loadingOverlay'); if(el) el.style.display='none'; }
+function showConnError(msg){ const el = document.getElementById('connErrorBanner'); if(el){ el.textContent = msg; el.style.display='block'; } }
+function hideConnError(){ const el = document.getElementById('connErrorBanner'); if(el) el.style.display='none'; }
 
 /* touch ripple */
 document.addEventListener('pointerdown', e=>{
@@ -1513,7 +1516,7 @@ function startAutoRefresh(){
         }
       }
     },
-    err=>{ console.error('Realtime sync error', err); }
+    err=>{ console.error('Realtime sync error', err); showConnError((LANG==='sw'?'Hitilafu ya usanidi wa moja kwa moja: ':'Realtime sync error: ') + (err && err.message ? err.message : String(err))); }
   );
 }
 
@@ -1537,21 +1540,29 @@ function renderAll(){
 /* ============================= INIT ============================= */
 async function init(){
   showLoadingOverlay();
-  if(!firebaseReady){
-    const sub = document.getElementById('loadingSubtext');
-    if(sub) sub.textContent = LANG==='sw'
-      ? '⚠️ Firebase haijasanidiwa bado — data haitahifadhika wala kushirikiwa. Angalia maelezo ya usanidi kwenye msimbo.'
-      : '⚠️ Firebase is not configured yet — data will not persist or sync. See setup notes in the code.';
+  try{
+    if(firebaseInitError){
+      showConnError((LANG==='sw'?'Hitilafu ya kusanidi Firebase: ':'Firebase setup error: ') + firebaseInitError);
+    } else if(!firebaseReady){
+      const sub = document.getElementById('loadingSubtext');
+      if(sub) sub.textContent = LANG==='sw'
+        ? '⚠️ Firebase haijasanidiwa bado — data haitahifadhika wala kushirikiwa.'
+        : '⚠️ Firebase is not configured yet — data will not persist or sync.';
+    }
+    document.body.setAttribute('data-theme', THEME);
+    document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
+    await loadData();
+    renderNav();
+    applyStaticI18n();
+    renderGreeting();
+    renderDashboard();
+    startAutoRefresh();
+  } catch(err){
+    console.error('Init failed', err);
+    showConnError((LANG==='sw'?'Hitilafu wakati wa kuanzisha: ':'Startup error: ') + (err && err.message ? err.message : String(err)));
+  } finally {
+    hideLoadingOverlay();
   }
-  document.body.setAttribute('data-theme', THEME);
-  document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
-  await loadData();
-  renderNav();
-  applyStaticI18n();
-  renderGreeting();
-  renderDashboard();
-  hideLoadingOverlay();
-  startAutoRefresh();
 }
 init();
 </script>
