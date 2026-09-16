@@ -12,9 +12,6 @@
 <title>ACCOUNT FAMILIA MCH. ELIZABETH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.4/chart.umd.min.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
 <style>
 :root{
   --bg:#0a0907;
@@ -675,6 +672,14 @@ tr.touchable:hover{ background:var(--panel-2); }
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<!-- Loaded here (end of body, not <head>) so the browser paints all the visible markup and CSS
+     first, then fetches these — page appears instantly instead of waiting on 3 network round-trips
+     before showing anything. They stay plain <script> tags (no defer/async) so execution order is
+     guaranteed and Chart / firebase are ready by the time the app script below runs. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
 /* ============================= TRANSLATIONS ============================= */
 const I18N = {
@@ -838,23 +843,13 @@ let db = null;
 let firebaseReady = false;
 let firebaseInitError = null;
 
-/* Firebase scripts load with `defer`, so they may not exist yet at parse time.
-   waitForFirebase() polls briefly until the SDK is available, then initializes it. */
-function waitForFirebase(maxWaitMs){
-  return new Promise(resolve=>{
-    const start = Date.now();
-    (function poll(){
-      if(typeof firebase !== 'undefined'){ resolve(true); return; }
-      if(Date.now()-start > maxWaitMs){ resolve(false); return; }
-      setTimeout(poll, 50);
-    })();
-  });
-}
-async function initFirebase(){
+/* The chart.js / firebase <script> tags sit right before this block (end of body) and are plain,
+   non-deferred scripts, so by the time this code runs they have already loaded and executed —
+   no polling or waiting needed. */
+function initFirebase(){
   try{
     if(!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('PASTE_')){ return; }
-    const available = await waitForFirebase(4000);
-    if(!available){ firebaseInitError = 'Firebase SDK haikupakia kwa wakati (network/CDN).'; return; }
+    if(typeof firebase === 'undefined'){ firebaseInitError = 'Firebase SDK haikupakia (angalia mtandao / CDN).'; return; }
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     firebaseReady = true;
@@ -1628,30 +1623,37 @@ async function init(){
   renderNav();
   applyStaticI18n();
   renderGreeting();
-  try{
-    await initFirebase();
-    if(firebaseInitError){
-      showConnError((LANG==='sw'?'Hitilafu ya kusanidi Firebase: ':'Firebase setup error: ') + firebaseInitError);
-    } else if(!firebaseReady){
-      const sub = document.getElementById('loadingSubtext');
-      if(sub) sub.textContent = LANG==='sw'
-        ? '⚠️ Firebase haijasanidiwa bado — data haitahifadhika wala kushirikiwa.'
-        : '⚠️ Firebase is not configured yet — data will not persist or sync.';
-    }
-    document.body.setAttribute('data-theme', THEME);
-    document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
-    await loadData();
-    renderNav();
-    applyStaticI18n();
-    renderGreeting();
-    renderDashboard();
-    startAutoRefresh();
-  } catch(err){
-    console.error('Init failed', err);
-    showConnError((LANG==='sw'?'Hitilafu wakati wa kuanzisha: ':'Startup error: ') + (err && err.message ? err.message : String(err)));
-  } finally {
-    hideLoadingOverlay();
+
+  initFirebase();
+  if(firebaseInitError){
+    showConnError((LANG==='sw'?'Hitilafu ya kusanidi Firebase: ':'Firebase setup error: ') + firebaseInitError);
+  } else if(!firebaseReady){
+    const sub = document.getElementById('loadingSubtext');
+    if(sub) sub.textContent = LANG==='sw'
+      ? '⚠️ Firebase haijasanidiwa bado — data haitahifadhika wala kushirikiwa.'
+      : '⚠️ Firebase is not configured yet — data will not persist or sync.';
   }
+  document.body.setAttribute('data-theme', THEME);
+  document.querySelectorAll('.theme-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.th===THEME));
+
+  try{ await loadData(); }
+  catch(err){ console.error('loadData failed', err); }
+
+  renderNav();
+  applyStaticI18n();
+  renderGreeting();
+
+  /* Rendering the dashboard and starting the realtime listener are kept in separate try/catch
+     blocks on purpose: if a chart or rendering bug throws, it must NOT prevent the realtime
+     Firestore listener from being set up — that listener is what makes edits on one device show
+     up on another, and it must not be at the mercy of unrelated UI errors. */
+  try{ renderDashboard(); }
+  catch(err){ console.error('renderDashboard failed', err); showConnError((LANG==='sw'?'Hitilafu ya kuonyesha dashibodi: ':'Dashboard render error: ') + (err && err.message ? err.message : String(err))); }
+
+  try{ startAutoRefresh(); }
+  catch(err){ console.error('startAutoRefresh failed', err); }
+
+  hideLoadingOverlay();
 }
 init();
   if ('serviceWorker' in navigator) {
