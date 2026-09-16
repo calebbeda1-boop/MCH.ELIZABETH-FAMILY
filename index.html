@@ -12,12 +12,9 @@
 <title>ACCOUNT FAMILIA MCH. ELIZABETH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/4.4.4/chart.umd.min.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
 <style>
 :root{
   --bg:#0a0907;
@@ -332,7 +329,7 @@ tr.touchable:hover{ background:var(--panel-2); }
 
       <div class="grid cols-4" id="dashStats"></div>
 
-      <div class="section-title"><h2 data-i18n="monthlyTarget">Lengo la Familia — Agosti</h2></div>
+      <div class="section-title"><h2 id="monthlyTargetTitle" data-i18n="monthlyTarget">Lengo la Familia</h2></div>
       <div class="card">
         <div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:10px;" id="targetLine">TSh 850,000 / TSh 1,000,000</div>
         <div class="progress-wrap"><div class="progress-bar" id="targetBar" style="width:0%"></div></div>
@@ -687,7 +684,7 @@ sw:{
   addContribution:"Ongeza Mchango", addExpense:"Ongeza Matumizi", loan:"Mkopo", transparency:"Uwazi wa Familia",
   announcements:"Matangazo", more:"Zaidi", tagline:"Umoja wetu, nguvu yetu.",
   totalContrib:"Michango Yote", totalExpense:"Matumizi Yote", monthlyContrib:"Michango ya Mwezi",
-  searchPh:"Tafuta...", monthlyTarget:"Lengo la Familia — Agosti", contribVsExpense:"Michango dhidi ya Matumizi",
+  searchPh:"Tafuta...", monthlyTarget:"Lengo la Familia", contribVsExpense:"Michango dhidi ya Matumizi",
   expenseByCat:"Matumizi kwa Aina", searchContrib:"Tafuta mchango...", allMembers:"Wanafamilia Wote",
   allProjects:"Miradi Yote", allStatus:"Hali Zote", paid:"Amelipa", pendingS:"Anasubiri", partial:"Sehemu",
   searchExpense:"Tafuta matumizi...", allCategories:"Aina Zote", target:"Lengo la Mradi: TSh 4,000,000",
@@ -719,7 +716,9 @@ sw:{
   fullName:"Jina Kamili", confirmRemoveMember:"Una uhakika unataka kumwondoa huyu mwanafamilia? Historia ya michango yake itabaki.",
   savedMember:"✅ Taarifa za mwanafamilia zimehifadhiwa", editHint:"Sehemu hii inaonekana kwa wote lakini kuhariri kunahitaji nenosiri.",
   loadingText:"Inapakia taarifa za familia...", syncNote:"Data ya pamoja &middot; inaonekana kwa wote",
-  saveFailed:"⚠️ Hifadhi imeshindikana, jaribu tena", loadFailed:"⚠️ Imeshindwa kupakia taarifa, jaribu kufresh ukurasa"
+  saveFailed:"⚠️ Hifadhi imeshindikana, jaribu tena", loadFailed:"⚠️ Imeshindwa kupakia taarifa, jaribu kufresh ukurasa",
+  monthAbbr0:"Jan", monthAbbr1:"Feb", monthAbbr2:"Mac", monthAbbr3:"Apr", monthAbbr4:"Mei", monthAbbr5:"Jun",
+  monthAbbr6:"Jul", monthAbbr7:"Ago", monthAbbr8:"Sep", monthAbbr9:"Okt", monthAbbr10:"Nov", monthAbbr11:"Des"
 },
 en:{
   dashboard:"Dashboard", contributions:"Contributions", expenses:"Expenses", renovation:"House Renovation",
@@ -727,7 +726,7 @@ en:{
   addContribution:"Add Contribution", addExpense:"Add Expense", loan:"Loan", transparency:"Family Transparency",
   announcements:"Announcements", more:"More", tagline:"Our unity, our strength.",
   totalContrib:"Total Contributions", totalExpense:"Total Expenses", monthlyContrib:"Monthly Contributions",
-  searchPh:"Search...", monthlyTarget:"Family Target — August", contribVsExpense:"Contributions vs Expenses",
+  searchPh:"Search...", monthlyTarget:"Family Target", contribVsExpense:"Contributions vs Expenses",
   expenseByCat:"Expenses by Category", searchContrib:"Search contribution...", allMembers:"All Members",
   allProjects:"All Projects", allStatus:"All Status", paid:"Paid", pendingS:"Pending", partial:"Partial",
   searchExpense:"Search expense...", allCategories:"All Categories", target:"Project Target: TSh 4,000,000",
@@ -759,7 +758,9 @@ en:{
   fullName:"Full Name", confirmRemoveMember:"Are you sure you want to remove this family member? Their contribution history will remain.",
   savedMember:"✅ Member details saved", editHint:"This section is visible to everyone, but editing requires a password.",
   loadingText:"Loading family data...", syncNote:"Shared data &middot; visible to everyone",
-  saveFailed:"⚠️ Save failed, please try again", loadFailed:"⚠️ Failed to load data, please refresh the page"
+  saveFailed:"⚠️ Save failed, please try again", loadFailed:"⚠️ Failed to load data, please refresh the page",
+  monthAbbr0:"Jan", monthAbbr1:"Feb", monthAbbr2:"Mar", monthAbbr3:"Apr", monthAbbr4:"May", monthAbbr5:"Jun",
+  monthAbbr6:"Jul", monthAbbr7:"Aug", monthAbbr8:"Sep", monthAbbr9:"Oct", monthAbbr10:"Nov", monthAbbr11:"Dec"
 }
 };
 let LANG = 'sw';
@@ -836,13 +837,29 @@ const firebaseConfig = {
 let db = null;
 let firebaseReady = false;
 let firebaseInitError = null;
-try{
-  if(firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE_')){
+
+/* Firebase scripts load with `defer`, so they may not exist yet at parse time.
+   waitForFirebase() polls briefly until the SDK is available, then initializes it. */
+function waitForFirebase(maxWaitMs){
+  return new Promise(resolve=>{
+    const start = Date.now();
+    (function poll(){
+      if(typeof firebase !== 'undefined'){ resolve(true); return; }
+      if(Date.now()-start > maxWaitMs){ resolve(false); return; }
+      setTimeout(poll, 50);
+    })();
+  });
+}
+async function initFirebase(){
+  try{
+    if(!firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('PASTE_')){ return; }
+    const available = await waitForFirebase(4000);
+    if(!available){ firebaseInitError = 'Firebase SDK haikupakia kwa wakati (network/CDN).'; return; }
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     firebaseReady = true;
-  }
-}catch(e){ console.error('Firebase init failed', e); firebaseReady = false; firebaseInitError = e && e.message ? e.message : String(e); }
+  }catch(e){ console.error('Firebase init failed', e); firebaseReady = false; firebaseInitError = e && e.message ? e.message : String(e); }
+}
 
 const FAMILY_DOC = () => db.collection('family_elizabeth').doc('data');
 
@@ -889,8 +906,18 @@ function totalContrib(){ return DATA.contributions.filter(c=>c.status==='Paid').
 function totalExpense(){ return DATA.expenses.reduce((s,e)=>s+Number(e.amount),0); }
 function balance(){ return totalContrib()-totalExpense(); }
 function monthKey(d){ return d.slice(0,7); }
-const CUR_MONTH = '2026-08';
-function monthlyContribTotal(){ return DATA.contributions.filter(c=>c.status==='Paid' && monthKey(c.date)===CUR_MONTH).reduce((s,c)=>s+Number(c.amount),0); }
+/* ---- LIVE DATE/TIME: always reflects the real moment the app is opened, never hardcoded ---- */
+function nowDate(){ return new Date(); }
+function todayISO(){
+  const d = nowDate();
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function currentMonthKey(){ return todayISO().slice(0,7); }
+function monthAbbr(monthIndex){ return t('monthAbbr'+monthIndex); }
+/* Label for whichever month is "this month" right now, e.g. "Ago 2026" / "Aug 2026" */
+function currentMonthLabel(){ const d = nowDate(); return `${monthAbbr(d.getMonth())} ${d.getFullYear()}`; }
+function monthlyContribTotal(){ const cm = currentMonthKey(); return DATA.contributions.filter(c=>c.status==='Paid' && monthKey(c.date)===cm).reduce((s,c)=>s+Number(c.amount),0); }
 function uid(p){ return p+Date.now()+Math.floor(Math.random()*999); }
 function initialsOf(name){ return name.split(' ').map(w=>w[0]).slice(0,2).join(''); }
 
@@ -908,6 +935,25 @@ function showLoadingOverlay(){ const el = document.getElementById('loadingOverla
 function hideLoadingOverlay(){ const el = document.getElementById('loadingOverlay'); if(el) el.style.display='none'; }
 function showConnError(msg){ const el = document.getElementById('connErrorBanner'); if(el){ el.textContent = msg; el.style.display='block'; } }
 function hideConnError(){ const el = document.getElementById('connErrorBanner'); if(el) el.style.display='none'; }
+
+/* ---- lazy-load heavy export libraries only when actually needed (keeps first paint fast) ---- */
+const _libCache = {};
+function loadScriptOnce(url){
+  if(_libCache[url]) return _libCache[url];
+  _libCache[url] = new Promise((resolve,reject)=>{
+    const s = document.createElement('script');
+    s.src = url; s.onload = ()=>resolve(true); s.onerror = ()=>reject(new Error('failed to load '+url));
+    document.body.appendChild(s);
+  });
+  return _libCache[url];
+}
+async function ensurePdfLibs(){
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+}
+async function ensureXlsxLib(){
+  await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+}
 
 /* touch ripple */
 document.addEventListener('pointerdown', e=>{
@@ -978,8 +1024,29 @@ function goldChartColors(){
   return { gold: css.getPropertyValue('--gold').trim(), goldLight: css.getPropertyValue('--gold-light').trim(), text: css.getPropertyValue('--text-dim').trim(), green: css.getPropertyValue('--green').trim(), red: css.getPropertyValue('--red').trim(), line: css.getPropertyValue('--line').trim() };
 }
 
+/* Build the last N months (oldest -> newest) ending at the REAL current month, so charts always
+   show up-to-date data instead of a frozen date range. */
+function lastMonthsKeys(n){
+  const out = [];
+  const d = nowDate();
+  d.setDate(1);
+  for(let i=n-1;i>=0;i--){
+    const dd = new Date(d.getFullYear(), d.getMonth()-i, 1);
+    out.push(`${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}`);
+  }
+  return out;
+}
+function lastMonthsLabels(n){
+  const d = nowDate(); d.setDate(1);
+  const out = [];
+  for(let i=n-1;i>=0;i--){
+    const dd = new Date(d.getFullYear(), d.getMonth()-i, 1);
+    out.push(monthAbbr(dd.getMonth()));
+  }
+  return out;
+}
 function monthlySeries(arr, dateField){
-  const months = ['2026-05','2026-06','2026-07','2026-08'];
+  const months = lastMonthsKeys(4);
   return months.map(m=> arr.filter(x=>monthKey(x[dateField])===m).reduce((s,x)=>s+Number(x.amount),0));
 }
 
@@ -1004,13 +1071,14 @@ function renderDashboard(){
 
   const target = 400000;
   const pct = Math.min(100, Math.round(monthlyContribTotal()/target*100));
+  document.getElementById('monthlyTargetTitle').textContent = `${t('monthlyTarget')} — ${currentMonthLabel()}`;
   document.getElementById('targetLine').textContent = `${fmt(monthlyContribTotal())} / ${fmt(target)}`;
   document.getElementById('targetBar').style.width = pct+'%';
 
   const colors = goldChartColors();
   destroyCharts();
   const ctx1 = document.getElementById('chartMain');
-  chartMain = new Chart(ctx1, { type:'bar', data:{ labels:['Mei','Jun','Jul','Ago'], datasets:[
+  chartMain = new Chart(ctx1, { type:'bar', data:{ labels: lastMonthsLabels(4), datasets:[
       {label:t('totalContrib'), data: monthlySeries(DATA.contributions.filter(c=>c.status==='Paid'),'date'), backgroundColor: colors.goldLight, borderRadius:6},
       {label:t('totalExpense'), data: monthlySeries(DATA.expenses,'date'), backgroundColor: colors.red, borderRadius:6}
     ]}, options: chartOpts(colors) });
@@ -1093,7 +1161,7 @@ document.getElementById('addContribBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('contribModalTitle').textContent = t('addContribution');
   document.getElementById('contribId').value='';
   ['cAmount','cRef','cNotes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cDate').value = '2026-08-30';
+  document.getElementById('cDate').value = todayISO();
   document.getElementById('cStatus').value='Paid';
   openModal('contribModal');
 });
@@ -1159,7 +1227,7 @@ document.getElementById('addExpenseBtn').onclick = ()=>requireAuth(()=>{
   document.getElementById('expenseModalTitle').textContent = t('addExpense');
   document.getElementById('eId').value='';
   ['eAmount','eDesc'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('eDate').value='2026-08-30';
+  document.getElementById('eDate').value=todayISO();
   openModal('expenseModal');
 });
 document.getElementById('saveExpenseBtn').onclick = async ()=>{
@@ -1263,10 +1331,11 @@ function renderMother(){
 /* ============================= RENDER: REPORTS ============================= */
 function renderReports(){
   const colors = goldChartColors();
+  const labels4 = lastMonthsLabels(4);
   const ctxB1 = document.getElementById('repBar1');
-  repBar1 = new Chart(ctxB1, { type:'bar', data:{ labels:['Mei','Jun','Jul','Ago'], datasets:[{ label:t('totalContrib'), data: monthlySeries(DATA.contributions.filter(c=>c.status==='Paid'),'date'), backgroundColor: colors.goldLight, borderRadius:6 }]}, options: chartOpts(colors) });
+  repBar1 = new Chart(ctxB1, { type:'bar', data:{ labels: labels4, datasets:[{ label:t('totalContrib'), data: monthlySeries(DATA.contributions.filter(c=>c.status==='Paid'),'date'), backgroundColor: colors.goldLight, borderRadius:6 }]}, options: chartOpts(colors) });
   const ctxL1 = document.getElementById('repLine1');
-  repLine1 = new Chart(ctxL1, { type:'line', data:{ labels:['Mei','Jun','Jul','Ago'], datasets:[{ label:t('totalExpense'), data: monthlySeries(DATA.expenses,'date'), borderColor: colors.red, backgroundColor:'transparent', tension:.35, pointBackgroundColor: colors.red }]}, options: chartOpts(colors) });
+  repLine1 = new Chart(ctxL1, { type:'line', data:{ labels: labels4, datasets:[{ label:t('totalExpense'), data: monthlySeries(DATA.expenses,'date'), borderColor: colors.red, backgroundColor:'transparent', tension:.35, pointBackgroundColor: colors.red }]}, options: chartOpts(colors) });
   const catMap = {}; DATA.expenses.forEach(e=>{ catMap[e.category]=(catMap[e.category]||0)+Number(e.amount); });
   const ctxP1 = document.getElementById('repPie1');
   repPie1 = new Chart(ctxP1, { type:'pie', data:{ labels:Object.keys(catMap), datasets:[{ data:Object.values(catMap), backgroundColor:['#d4af37','#e8685a','#5fd68a','#e8b455','#8a7226','#f3d878','#c98f22','#a99b7e'] }]}, options:{ plugins:{ legend:{ labels:{ color: colors.text, font:{size:10} } } } } });
@@ -1275,12 +1344,13 @@ function renderReports(){
   repBar2 = new Chart(ctxB2, { type:'bar', data:{ labels: DATA.members.map(m=>m.name), datasets:[{ data:memberTotals, backgroundColor: colors.gold, borderRadius:6 }]}, options:{...chartOpts(colors), indexAxis:'y'} });
 }
 
-/* PDF & Excel export */
-document.getElementById('exportPdfBtn').onclick = ()=>{
+/* PDF & Excel export — libraries are fetched on demand the first time these buttons are pressed */
+document.getElementById('exportPdfBtn').onclick = async ()=>{
+  await ensurePdfLibs();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(16); doc.text('ACCOUNT FAMILIA MCH. ELIZABETH', 14, 16);
-  doc.setFontSize(10); doc.text((LANG==='sw'?'Ripoti ya Fedha — Imetolewa ':'Financial Report — Generated ')+new Date().toLocaleDateString(), 14, 23);
+  doc.setFontSize(10); doc.text((LANG==='sw'?'Ripoti ya Fedha — Imetolewa ':'Financial Report — Generated ')+nowDate().toLocaleDateString(), 14, 23);
   doc.setFontSize(11);
   doc.text(`${t('balance')}: ${fmt(balance())}   ${t('totalContrib')}: ${fmt(totalContrib())}   ${t('totalExpense')}: ${fmt(totalExpense())}`, 14, 31);
   doc.autoTable({ startY:38, head:[[t('member'),t('amount'),t('date'),t('project'),t('status')]],
@@ -1294,7 +1364,8 @@ document.getElementById('exportPdfBtn').onclick = ()=>{
   doc.save('familia-elizabeth-ripoti.pdf');
   toast(LANG==='sw'?'✅ PDF imepakuliwa':'✅ PDF downloaded');
 };
-document.getElementById('exportExcelBtn').onclick = ()=>{
+document.getElementById('exportExcelBtn').onclick = async ()=>{
+  await ensureXlsxLib();
   const wb = XLSX.utils.book_new();
   const wsC = XLSX.utils.json_to_sheet(DATA.contributions.map(c=>({ Member:c.member, Amount:c.amount, Date:c.date, Project:c.project, Method:c.method, Reference:c.ref, Status:c.status })));
   const wsE = XLSX.utils.json_to_sheet(DATA.expenses.map(e=>({ Category:e.category, Amount:e.amount, Date:e.date, Person:e.person, Description:e.desc })));
@@ -1344,7 +1415,7 @@ document.getElementById('addAnnBtn').onclick = ()=>requireAuth(()=>{ document.ge
 document.getElementById('saveAnnBtn').onclick = async ()=>{
   const title = document.getElementById('aTitle').value, msg = document.getElementById('aMsg').value;
   if(!title || !msg){ toast(t('errorFields')); return; }
-  DATA.announcements.push({ id:uid('a'), author:'ADMIN', title, msg, date:'2026-08-30', reacts:{heart:0,pray:0,thumb:0} });
+  DATA.announcements.push({ id:uid('a'), author:'ADMIN', title, msg, date:todayISO(), reacts:{heart:0,pray:0,thumb:0} });
   await saveData(); closeModal('annModal'); renderAnnouncements(); toast(t('savedContrib'));
 };
 
@@ -1474,13 +1545,17 @@ document.getElementById('saveEditMemberBtn').onclick = async ()=>{
   document.addEventListener('change', e=>{ if(e.target.id===id) renderExpenses(); });
 });
 
-/* ============================= GREETING / DATE ============================= */
+/* ============================= GREETING / DATE (always live — computed at the exact moment the app opens) ============================= */
 function renderGreeting(){
-  const hr = new Date().getHours();
+  const now = nowDate();
+  const hr = now.getHours();
   const g = hr<12? t('greetMorning') : hr<17? t('greetAfternoon') : t('greetEvening');
   document.getElementById('greetTitle').textContent = `${g}, Familia MCH. Elizabeth ❤️`;
-  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
-  document.getElementById('todayDate').textContent = new Date('2026-08-31').toLocaleDateString(LANG==='sw'?'sw-TZ':'en-US', opts);
+  const dateOpts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+  const timeOpts = { hour:'2-digit', minute:'2-digit' };
+  const dateStr = now.toLocaleDateString(LANG==='sw'?'sw-TZ':'en-US', dateOpts);
+  const timeStr = now.toLocaleTimeString(LANG==='sw'?'sw-TZ':'en-US', timeOpts);
+  document.getElementById('todayDate').textContent = `${dateStr} · ${timeStr}`;
 }
 
 /* ============================= LANGUAGE / THEME ============================= */
@@ -1507,6 +1582,9 @@ async function setTheme(th){
   await savePrefs();
 }
 document.querySelectorAll('.theme-toggle button').forEach(b=> b.onclick = ()=> setTheme(b.dataset.th));
+
+/* keep the clock in the greeting line fresh while the app stays open */
+setInterval(()=>{ if(activeView){ renderGreeting(); } }, 30000);
 
 /* ============================= REAL-TIME SYNC (Firestore pushes updates instantly to every open dashboard) ============================= */
 function startAutoRefresh(){
@@ -1546,7 +1624,12 @@ function renderAll(){
 /* ============================= INIT ============================= */
 async function init(){
   showLoadingOverlay();
+  /* show something useful immediately instead of a blank screen while Firebase connects */
+  renderNav();
+  applyStaticI18n();
+  renderGreeting();
   try{
+    await initFirebase();
     if(firebaseInitError){
       showConnError((LANG==='sw'?'Hitilafu ya kusanidi Firebase: ':'Firebase setup error: ') + firebaseInitError);
     } else if(!firebaseReady){
